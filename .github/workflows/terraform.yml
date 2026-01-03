@@ -6,6 +6,9 @@ on:
       - main
   pull_request:
 
+env:
+  AWS_REGION: ap-south-1
+
 jobs:
   terraform:
     name: Terraform Plan
@@ -18,13 +21,13 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      # ✅ AWS credentials (THIS WAS MISSING)
-      - name: Configure AWS credentials
+      # ✅ Configure AWS credentials for Terraform
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-south-1
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Terraform Init
         working-directory: terraform
@@ -44,12 +47,9 @@ jobs:
 
   apply:
     name: Terraform Apply (Manual Approval)
-    runs-on: ubuntu-latest
     needs: terraform
-    if: github.ref == 'refs/heads/main'
-
-    environment:
-      name: production   # ⏸️ THIS CREATES APPROVAL
+    runs-on: ubuntu-latest
+    environment: production   # 🔐 This triggers “Review deployments” approval
 
     steps:
       - name: Checkout code
@@ -58,12 +58,13 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      - name: Configure AWS credentials
+      # ✅ Configure AWS credentials for Apply job too
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-south-1
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Terraform Init
         working-directory: terraform
