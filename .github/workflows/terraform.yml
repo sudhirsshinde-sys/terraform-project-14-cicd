@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - main
+  pull_request:
 
 jobs:
   terraform:
+    name: Terraform Plan
     runs-on: ubuntu-latest
 
     steps:
@@ -15,6 +17,14 @@ jobs:
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
+
+      # ✅ AWS credentials (THIS WAS MISSING)
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
 
       - name: Terraform Init
         working-directory: terraform
@@ -33,9 +43,13 @@ jobs:
         run: terraform plan
 
   apply:
-    needs: terraform
+    name: Terraform Apply (Manual Approval)
     runs-on: ubuntu-latest
-    environment: production   # 👈 THIS creates approval
+    needs: terraform
+    if: github.ref == 'refs/heads/main'
+
+    environment:
+      name: production   # ⏸️ THIS CREATES APPROVAL
 
     steps:
       - name: Checkout code
@@ -43,6 +57,13 @@ jobs:
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
 
       - name: Terraform Init
         working-directory: terraform
